@@ -2,7 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Logo Blaster - Space Shooter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Stack Blaster - Space Shooter</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     
@@ -16,11 +17,15 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      padding: 10px;
+      box-sizing: border-box;
     }
     
     #gameContainer {
       position: relative;
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      max-width: 100vw;
+      max-height: 80vh;
     }
     
     #gameCanvas {
@@ -30,6 +35,8 @@
       image-rendering: pixelated;
       image-rendering: -moz-crisp-edges;
       image-rendering: crisp-edges;
+      max-width: 100%;
+      height: auto;
     }
     
     #ui {
@@ -203,6 +210,92 @@
       margin-top: 30px;
       line-height: 1.5;
     }
+    
+    /* Mobile Controls */
+    #mobileControls {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 400px;
+      z-index: 1000;
+    }
+    
+    #controlsContainer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    
+    #dpad {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+    
+    .dpad-btn {
+      position: absolute;
+      background: rgba(0, 255, 255, 0.3);
+      border: 2px solid #0ff;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    
+    #up { top: 0; left: 40px; width: 40px; height: 40px; }
+    #down { bottom: 0; left: 40px; width: 40px; height: 40px; }
+    #left { top: 40px; left: 0; width: 40px; height: 40px; }
+    #right { top: 40px; right: 0; width: 40px; height: 40px; }
+    
+    #fireButton {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.3);
+      border: 3px solid #f00;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    
+    .dpad-btn:active, #fireButton:active {
+      background: rgba(0, 255, 255, 0.6);
+      transform: scale(0.95);
+    }
+    
+    #fireButton:active {
+      background: rgba(255, 0, 0, 0.6);
+    }
+    
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      #mobileControls {
+        display: block;
+      }
+      
+      #gameCanvas {
+        max-height: 60vh;
+      }
+      
+      #instructions {
+        font-size: 6px;
+      }
+      
+      #audioControls {
+        font-size: 6px;
+      }
+      
+      #audioControls button {
+        font-size: 6px;
+        padding: 3px 6px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -219,8 +312,8 @@
       <button onclick="restartGame()">PLAY AGAIN</button>
     </div>
     <div id="startScreen">
-      <h1>LOGO BLASTER</h1>
-      <h2>SPACE SHOOTER</h2>
+      <h1>STACK BLASTER</h1>
+      <h2>the SPACE SHOOTER</h2>
       <button onclick="startGame()">START GAME</button>
       <div class="instructions">
         ARROW KEYS: MOVE<br>
@@ -234,7 +327,25 @@
     Arrow Keys: Move | Space: Fire | P: Pause
   </div>
   <div id="audioControls">
+    Music: <button onclick="toggleMusic()">OFF</button>
     SFX: <button onclick="toggleSFX()">OFF</button>
+  </div>
+  
+  <div style="margin-top: 20px; font-size: 6px; color: #fff; text-align: center;">
+    vibed by @brick
+  </div>
+  
+  <!-- Mobile Controls -->
+  <div id="mobileControls">
+    <div id="controlsContainer">
+      <div id="dpad">
+        <button class="dpad-btn" id="up">↑</button>
+        <button class="dpad-btn" id="left">←</button>
+        <button class="dpad-btn" id="right">→</button>
+        <button class="dpad-btn" id="down">↓</button>
+      </div>
+      <button id="fireButton">FIRE</button>
+    </div>
   </div>
   
   <script>
@@ -250,6 +361,8 @@
     // Audio Context and Sound System
     let audioContext;
     let sfxEnabled = false;
+    let musicEnabled = false;
+    let backgroundMusic = null;
     
     // Initialize Audio Context
     function initAudio() {
@@ -258,6 +371,45 @@
       }
       if (audioContext.state === 'suspended') {
         audioContext.resume();
+      }
+      
+      // Start background music if enabled
+      if (musicEnabled && !backgroundMusic) {
+        startBackgroundMusic();
+      }
+    }
+    
+    // Background Music
+    function startBackgroundMusic() {
+      if (!musicEnabled) return;
+      
+      backgroundMusic = new Audio('theme.mp3');
+      backgroundMusic.loop = true;
+      backgroundMusic.volume = 0.3; // Quiet volume
+      
+      // Play with error handling
+      backgroundMusic.play().catch(e => {
+        console.log('Music autoplay blocked by browser');
+      });
+    }
+    
+    function stopBackgroundMusic() {
+      if (backgroundMusic) {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+        backgroundMusic = null;
+      }
+    }
+    
+    function toggleMusic() {
+      musicEnabled = !musicEnabled;
+      const buttons = document.querySelectorAll('#audioControls button');
+      buttons[0].textContent = musicEnabled ? 'ON' : 'OFF';
+      
+      if (musicEnabled) {
+        startBackgroundMusic();
+      } else {
+        stopBackgroundMusic();
       }
     }
     
@@ -371,8 +523,8 @@
     
     function toggleSFX() {
       sfxEnabled = !sfxEnabled;
-      const button = document.querySelector('#audioControls button');
-      button.textContent = sfxEnabled ? 'ON' : 'OFF';
+      const buttons = document.querySelectorAll('#audioControls button');
+      buttons[1].textContent = sfxEnabled ? 'ON' : 'OFF';
     }
     
     // Game state
@@ -559,17 +711,75 @@
       }
     }
     
-    // Input handling
+    // Input handling - Keyboard (existing)
     document.addEventListener('keydown', e => {
       keys[e.code] = true;
       if (e.code === 'KeyP') gameRunning = !gameRunning;
     });
     document.addEventListener('keyup', e => keys[e.code] = false);
     
+    // Touch Controls for Mobile
+    let touchKeys = {};
+    
+    function setupTouchControls() {
+      const touchButtons = {
+        'up': 'ArrowUp',
+        'down': 'ArrowDown', 
+        'left': 'ArrowLeft',
+        'right': 'ArrowRight',
+        'fireButton': 'Space'
+      };
+      
+      Object.entries(touchButtons).forEach(([id, keyCode]) => {
+        const button = document.getElementById(id);
+        if (button) {
+          // Touch start
+          button.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchKeys[keyCode] = true;
+            keys[keyCode] = true;
+          });
+          
+          // Touch end
+          button.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchKeys[keyCode] = false;
+            keys[keyCode] = false;
+          });
+          
+          // Mouse events for testing on desktop
+          button.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            touchKeys[keyCode] = true;
+            keys[keyCode] = true;
+          });
+          
+          button.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            touchKeys[keyCode] = false;
+            keys[keyCode] = false;
+          });
+          
+          // Prevent context menu
+          button.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+      });
+    }
+    
+    // Initialize touch controls
+    setupTouchControls();
+    
     // Initialize audio on first user interaction
     document.addEventListener('click', () => {
       initAudio();
     }, { once: true });
+    
+    // Also try to start music immediately (may be blocked by browser)
+    window.addEventListener('load', () => {
+      if (musicEnabled) {
+        startBackgroundMusic();
+      }
+    });
     
     function update() {
       if (!gameRunning || !gameStarted) return;
@@ -738,6 +948,8 @@
       playGameOverSound(); // Add sound effect
       document.getElementById('finalScore').textContent = score;
       document.getElementById('gameOver').style.display = 'block';
+      
+      // Keep music playing during game over
     }
     
     function restartGame() {
@@ -763,6 +975,8 @@
       
       gameRunning = false;
       gameStarted = false;
+      
+      // Music continues playing
     }
     
     function draw() {
