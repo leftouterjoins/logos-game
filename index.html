@@ -211,76 +211,16 @@
       line-height: 1.5;
     }
     
-    /* Mobile Controls */
+    /* Mobile Controls - Remove visible controls */
     #mobileControls {
       display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 400px;
-      z-index: 1000;
-    }
-    
-    #controlsContainer {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-    
-    #dpad {
-      position: relative;
-      width: 120px;
-      height: 120px;
-    }
-    
-    .dpad-btn {
-      position: absolute;
-      background: rgba(0, 255, 255, 0.3);
-      border: 2px solid #0ff;
-      color: #fff;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 8px;
-      user-select: none;
-      touch-action: manipulation;
-    }
-    
-    #up { top: 0; left: 40px; width: 40px; height: 40px; }
-    #down { bottom: 0; left: 40px; width: 40px; height: 40px; }
-    #left { top: 40px; left: 0; width: 40px; height: 40px; }
-    #right { top: 40px; right: 0; width: 40px; height: 40px; }
-    
-    #fireButton {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: rgba(255, 0, 0, 0.3);
-      border: 3px solid #f00;
-      color: #fff;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 10px;
-      user-select: none;
-      touch-action: manipulation;
-    }
-    
-    .dpad-btn:active, #fireButton:active {
-      background: rgba(0, 255, 255, 0.6);
-      transform: scale(0.95);
-    }
-    
-    #fireButton:active {
-      background: rgba(255, 0, 0, 0.6);
     }
     
     /* Mobile-specific styles */
     @media (max-width: 768px) {
-      #mobileControls {
-        display: block;
-      }
-      
       #gameCanvas {
         max-height: 60vh;
+        touch-action: none; /* Prevent scrolling */
       }
       
       #instructions {
@@ -722,52 +662,69 @@
     });
     document.addEventListener('keyup', e => keys[e.code] = false);
     
-    // Touch Controls for Mobile
-    let touchKeys = {};
+    // Touch Controls for Mobile - Touch and drag to move, auto-fire while holding
+    let isTouching = false;
+    let touchStartTime = 0;
     
     function setupTouchControls() {
-      const touchButtons = {
-        'up': 'ArrowUp',
-        'down': 'ArrowDown', 
-        'left': 'ArrowLeft',
-        'right': 'ArrowRight',
-        'fireButton': 'Space'
-      };
+      const canvas = document.getElementById('gameCanvas');
       
-      Object.entries(touchButtons).forEach(([id, keyCode]) => {
-        const button = document.getElementById(id);
-        if (button) {
-          // Touch start
-          button.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            touchKeys[keyCode] = true;
-            keys[keyCode] = true;
-          });
-          
-          // Touch end
-          button.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            touchKeys[keyCode] = false;
-            keys[keyCode] = false;
-          });
-          
-          // Mouse events for testing on desktop
-          button.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            touchKeys[keyCode] = true;
-            keys[keyCode] = true;
-          });
-          
-          button.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            touchKeys[keyCode] = false;
-            keys[keyCode] = false;
-          });
-          
-          // Prevent context menu
-          button.addEventListener('contextmenu', (e) => e.preventDefault());
-        }
+      function getTouchPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const touch = e.touches[0] || e.changedTouches[0];
+        return {
+          x: (touch.clientX - rect.left) * scaleX,
+          y: (touch.clientY - rect.top) * scaleY
+        };
+      }
+      
+      // Touch start - begin tracking and auto-fire
+      canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (!gameStarted || !gameRunning) return;
+        
+        isTouching = true;
+        touchStartTime = Date.now();
+        
+        const touchPos = getTouchPos(e);
+        // Move ship to touch position (with boundaries)
+        ship.x = Math.max(0, Math.min(canvas.width - ship.w, touchPos.x - ship.w/2));
+        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - ship.h/2));
+        
+        // Start auto-firing
+        keys['Space'] = true;
       });
+      
+      // Touch move - follow finger
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isTouching || !gameStarted || !gameRunning) return;
+        
+        const touchPos = getTouchPos(e);
+        // Move ship to follow touch
+        ship.x = Math.max(0, Math.min(canvas.width - ship.w, touchPos.x - ship.w/2));
+        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - ship.h/2));
+      });
+      
+      // Touch end - stop auto-firing
+      canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        isTouching = false;
+        keys['Space'] = false;
+      });
+      
+      // Handle touch cancel
+      canvas.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        isTouching = false;
+        keys['Space'] = false;
+      });
+      
+      // Prevent context menu on long press
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     
     // Initialize touch controls
