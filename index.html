@@ -349,6 +349,7 @@
       musicEnabled = !musicEnabled;
       const buttons = document.querySelectorAll('#audioControls button');
       buttons[0].textContent = musicEnabled ? 'ON' : 'OFF';
+      buttons[0].blur();
       
       if (musicEnabled) {
         startBackgroundMusic();
@@ -469,6 +470,7 @@
       sfxEnabled = !sfxEnabled;
       const buttons = document.querySelectorAll('#audioControls button');
       buttons[1].textContent = sfxEnabled ? 'ON' : 'OFF';
+      buttons[1].blur();
     }
     
     // Game state
@@ -690,9 +692,10 @@
         touchStartTime = Date.now();
         
         const touchPos = getTouchPos(e);
-        // Move ship to touch position (with boundaries)
+        // Move ship above finger with offset so it's visible
+        const offsetY = 80; // Distance above finger
         ship.x = Math.max(0, Math.min(canvas.width - ship.w, touchPos.x - ship.w/2));
-        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - ship.h/2));
+        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - offsetY));
         
         // Start auto-firing
         keys['Space'] = true;
@@ -704,9 +707,10 @@
         if (!isTouching || !gameStarted || !gameRunning) return;
         
         const touchPos = getTouchPos(e);
-        // Move ship to follow touch
+        // Move ship above finger with offset so it's visible
+        const offsetY = 80; // Distance above finger
         ship.x = Math.max(0, Math.min(canvas.width - ship.w, touchPos.x - ship.w/2));
-        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - ship.h/2));
+        ship.y = Math.max(canvas.height / 2, Math.min(canvas.height - ship.h, touchPos.y - offsetY));
       });
       
       // Touch end - stop auto-firing
